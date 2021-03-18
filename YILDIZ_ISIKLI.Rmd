@@ -1,0 +1,629 @@
+---
+title: "Stat4DS / Homework 01"
+output:
+    prettydoc::html_pretty:
+    highlight: github
+    theme: cayman
+---
+---
+subtitle: "PART A & PART B"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+
+```{r}
+#install.packages('sdpt3r')
+#install.packages('igraph')
+library(sdpt3r)
+library(igraph)
+#install.packages('prettydoc')
+library(prettydoc)
+```
+PART A
+```{r}
+#----------------------------FUNCTIONS----------------------------------
+M=1000 #simulation size
+
+#Fuction to get its true opt(G)
+get_opt_function <- function(G){
+  B=get.adjacency(G, sparse=FALSE)
+  maxcut_value <- abs(maxcut(B)$pobj)  #use maxcut function for opt() #use abs to take + result
+  return(maxcut_value)
+}
+
+#Randomized Max-Cut Algorithm Function
+randomized_maxCut_algorithm <- function(V) {   
+  U <- list() #empty U list
+  #Define elements of U with flip a fair coin
+  #If coin is Heads add v to U otherwise do not
+  for(i in 1:(length(V))){   
+    coin<-sample (c(0,1), size=1) #tail:0 and head:1
+    if(coin==1){
+      U <- c(U,V[i])
+    }
+  }
+  return(U)
+  }
+
+#A function to calculate card(δ(U))
+#Here, we consider if set U is empty or not
+#If set U is empty, cardinality of U is empty
+card_U <- function(new_U,edges_list){
+  cardinality<-0
+  if(length(new_U)>0){
+    for (i in seq(1,length(edges_list), 2))
+      {
+        #start from i to check edges list, if i is in set U, look at right side element of i
+        #if right side element of i is not in set U, increase the cardinality by one
+        if (is.element(edges_list[i],new_U) & (is.element(edges_list[i+1],new_U)==FALSE) ){
+          cardinality <- cardinality +1
+        }
+        #start from i+1 to continue check edges list, if i+1 is in set U, look at left side element of i+1
+        #if left side element of i+1 is not in set U, increase the cardinality by one
+        if (is.element(edges_list[i+1],new_U) & (is.element(edges_list[i],new_U)==FALSE) ){
+          cardinality <- cardinality +1
+        }
+      }
+  }
+  else{
+    cardinality<-0
+  }
+  
+  return(cardinality)
+  
+}
+
+#A function to compare cut-size average with the theoretical bound opt(G)/2
+compare_cutsize_withBound <- function(average_cutsize,opt_G){
+  if(average_cutsize >= (opt_G/2)){
+    print('The average cut-size over these M simulations is bigger or same than the theoretical bound opt(G)/2')
+  }
+  else{
+    print('The average cut-size over these M simulations is smaller than the theoretical bound opt(G)/2')
+  }
+  
+}
+
+
+```
+CREATE FIRST GRAPH AND SIMULATION
+```{r}
+ptm <- proc.time()
+# Pick a specific (small) graph 
+graph_size1=50 
+G1 <- erdos.renyi.game(n=graph_size1, p.or.m = 0.1)
+V <- c(1:graph_size1) 
+edges_list = t(get.edgelist(G1))
+edges_list = c(edges_list)
+
+#call opt_G function for first graph
+opt_G = get_opt_function(G1)
+
+#create an empty array to add all cardinalties
+all_cardinality = rep()
+#Simulate first graph
+for(m in 1:M){
+  new_U= randomized_maxCut_algorithm(V)
+  cardinality_of_New_U = card_U(new_U,edges_list)
+  all_cardinality <- c(all_cardinality, cardinality_of_New_U) #add all cardinalities M times
+  
+}
+
+plot(G1) #plot the graph
+cat('opt_G value is', opt_G)
+cat('After M times simulations, all cardinalities of first graph are',all_cardinality[1:300])
+
+#Evaluate the average cut-size over these M simulation
+average_cutsize = mean(all_cardinality)
+cat('Mean is all cardinalities is',average_cutsize)
+#call compare cut size function
+compare_cutsize_withBound(average_cutsize,opt_G)
+# Stop the clock
+proc.time() - ptm
+
+```
+```{r}
+summary(all_cardinality)
+
+```
+```
+Summary shows us that with first graph we can not almost never reach maximum cut and also almost never reach an empty set.
+```
+```{r}
+hist(all_cardinality,main="Histogram of All Cardinalities",xlab="All Cardinalities",ylab="Frequency",col="red",freq=FALSE)
+```
+```
+This distribution converges gaussian and we can see that optG has a low probability to occur.
+```
+CREATE SECOND GRAPH AND SIMULATION TO SEE PERFORMANCE
+
+```{r}
+ptm <- proc.time()
+# Last Step: Change the graph size to see if there is an impact on the performance 
+# Pick a specific (small) graph 
+graph_size2=70 
+G2 <- erdos.renyi.game(n=graph_size2, p.or.m = 0.1)
+V2 <- c(1:graph_size2) 
+edges_list2 = t(get.edgelist(G2))
+edges_list2 = c(edges_list2)
+
+#call opt_G function for second graph
+opt_G2 = get_opt_function(G2)
+
+#create an empty array to add all cardinalties
+all_cardinality2 = rep()
+
+#Simulate second graph
+for(m in 1:M){
+  new_U2= randomized_maxCut_algorithm(V2)
+  cardinality_of_New_U2 = card_U(new_U2,edges_list2)
+  all_cardinality2 <- c(all_cardinality2, cardinality_of_New_U2) #add all cardinalities M times
+}
+
+plot(G2) #plot the second graph
+cat('opt_G value is', opt_G2)
+cat('After M times simulations, all cardinalities of first graph are',all_cardinality2[1:300])
+
+#Evaluate the average cut-size over these M simulation
+average_cutsize2 = mean(all_cardinality2)
+cat('Mean is all cardinalities is',average_cutsize2)
+#call compare cut size function
+compare_cutsize_withBound(average_cutsize2,opt_G2)
+# Stop the clock
+proc.time() - ptm
+```
+```{r}
+summary(all_cardinality2)
+
+```
+```
+Summary shows us that with second graph we can not almost never reach maximum cut and also almost never reach an empty set.
+```
+```{r}
+hist(all_cardinality2,main="Histogram of All Cardinalities",xlab="All Cardinalities",ylab="Frequency",col="blue4",freq=FALSE)
+```
+```
+This distribution is kind of normal distribution and we can see that optG has a low probability to occur.
+```
+CREATE THIRD GRAPH AND SIMULATION TO SEE PERFORMANCE
+```{r}
+ptm <- proc.time()
+# Last Step: Change the graph size to see if there is an impact on the performance 
+# Pick a specific (small) graph 
+graph_size3=30 
+G3 <- erdos.renyi.game(n=graph_size3, p.or.m = 0.1)
+V3 <- c(1:graph_size3) 
+edges_list3 = t(get.edgelist(G3))
+edges_list3 = c(edges_list3)
+
+
+#call opt_G function for second graph
+opt_G3 = get_opt_function(G3)
+
+#create an empty array to add all cardinalties
+all_cardinality3 = rep()
+
+#Simulate second graph
+for(m in 1:M){
+  new_U3= randomized_maxCut_algorithm(V3)
+  cardinality_of_New_U3 = card_U(new_U3,edges_list3)
+  all_cardinality3 <- c(all_cardinality3, cardinality_of_New_U3) #add all cardinalities M times
+}
+
+plot(G3) #plot the second graph
+cat('opt_G value is', opt_G3)
+cat('After M times simulations, all cardinalities of first graph are',all_cardinality3[1:300])
+
+#Evaluate the average cut-size over these M simulation
+average_cutsize3 = mean(all_cardinality3)
+cat('Mean is all cardinalities is',average_cutsize3)
+#call compare cut size function
+compare_cutsize_withBound(average_cutsize3,opt_G3)
+# Stop the clock
+proc.time() - ptm
+```
+```{r}
+summary(all_cardinality3)
+
+```
+```
+Summary shows us that with this graph we can not almost never reach maximum cut and also almost never reach an empty set.
+```
+```{r}
+hist(all_cardinality3,main="Histogram of All Cardinalities",xlab="All Cardinalities",ylab="Frequency",col="darkmagenta",freq=FALSE)
+```
+```
+This distribution is kind of normal distribution and again we can see that optG has a low probability to occur.
+```
+
+```
+OBSERVATION OF CHANGING THE GRAPH SIZE 
+We try our algorithm with 3 graphs with different sizes (50,70,30)
+As you can see above, the average cut-size over these M simulations is bigger than the theoretical bound opt(G)/2. 
+On the other hand, we see that changing the size of graph there is an impact on the performance.
+Second graph(70) run time is around 3 times run time of first one and ffirst graph(50) run time is around 4 times run time of third one(30).
+
+```
+PART B
+
+```
+1st Trial
+``` 
+```{r}
+#igraph package installed
+library (igraph)
+
+#Started with a graph with 4 vertices and directed edges.
+G <- make_empty_graph(n = 4) %>%
+add_edges(c(1,2, 2,3, 3,4)) %>%
+add_edges(c(4,1))
+E(G)[[]]
+plot(G)
+
+```
+```
+We have started by generating the graph with 4 nodes and 4 directed edges. Please see the starting graph above.
+``` 
+```{r}
+#The probabilities genereated with unif(0, 1) to check whether the new vertex will be added to the ranomnly selected vertex or accorrdign to indegree.
+unif_list = runif(50000, min = 0 , max = 1)
+
+#Specifying the last vertex as 4 since we have the biggest as 4 now.
+last_vrtx = 4
+
+#Search in the uniform list created above in a for loop
+for (i in unif_list){
+  
+  last_vrtx = last_vrtx + 1 #The last vertex updated to add new vertex to the graph.
+  
+  vertex = as.integer(sample(size = 1, V(G))) #Randomnly select the vertex from the graph to connect the new vertex.
+  new_vertex = as.integer(last_vrtx) #Create the new vertex
+  
+  #Check whether the probability is greater than 0.5 to connect new vertex with the one randomnly selected.
+  if (i > 0.5){
+    G <- add_vertices(G,1) #Add the new vertex to the graph
+    dir_edge = c(new_vertex, vertex) #Connect the randomnly selected and new created vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+  
+  #If the probability equal to and lower than 0.5 select the vertex according to its indegree.
+  else {
+    vertex = sample(size = 1,V(G), prob = degree(G, mode = 'in', normalized = T)) #Select the vertex from graph that will be connected with new vertex according to its indegree.
+    new_vertex = as.integer(last_vrtx) #Create the new vertex.
+    G <- add_vertices(G,1) #Add the new vertex tot the graph G
+    dir_edge = c(new_vertex, vertex) #Connect the selected vertex with the new vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+}
+
+#Plot the G by specifying the arrow size, vertex size and remove the vertex label to have a more clear graph.
+plot(G, edge.arrow.size=0.01,
+     vertex.size=0.01,
+     vertex.label = NA)
+
+
+
+```
+```
+We have generated a random uniform list with (0,1) boundries. We have started to ad new vertices and connect them with the old graph by cheking the probability. The new vertex connect with the randomnly selected vertex with probability γ = 0.5 and connect with the one according to indegree with probability 1 − γ = 0.5. Please see the big graph above.
+```
+
+```{r}
+#Plot the empirical degree distribution on a log-log plot by ggplot2
+deg_G <- degree(G, mode = "total")
+#Fit the power law to the degree distribution
+fit <- fit_power_law(deg_G, implementation="R.mle")
+p_alpha <- stats4::coef(fit)
+p_alpha
+xx <- deg_G
+
+ff <- function(xx){
+  xx^(-p_alpha)
+}
+
+deg_G.histogram <- as.data.frame(table(deg_G))
+deg_G.histogram[,1] <- as.numeric(paste(deg_G.histogram[,1]))
+
+library(ggplot2)
+qplot()+
+  geom_point(aes(x = deg_G.histogram$deg_G, y = deg_G.histogram$Freq/sum(deg_G.histogram$Freq)))+
+  geom_point(colour='blue') +
+  scale_x_continuous("Degree",
+                     breaks = c(1, 5, 10, 50, 100, 300, 1000, 10000, 100000),
+                     trans = "log10") +
+  scale_y_continuous("Frequency",
+                     breaks = c(0, 0,000001, 0.00001,0,0001,0,001, 0.01, 0.1, 1),
+                     trans = "log10") +
+  ggtitle("Empirical Degree Distribution") +
+  theme_bw() +
+  geom_line(aes(x=seq(1,100,0.1),y=ff(seq(1,100,0.1))),col="red")
+
+
+```
+
+```
+As it is shown above, we have plot the empirical degree distribution on a log-log scale. We have also apllied the power law fit function in here. And we have shown above the power law fit to our degree distribution.
+```
+
+```{r}
+#Plot CCDF on a log-log plot
+ccdf <- function(deg) {
+  n = length(deg)
+  max = max(deg)
+  p = rep(0, max)
+  for (i in 1:length(p)) {
+    p[i] = length(deg[deg >= i]) / n
+  } 
+  return(p)
+}
+
+k = 2
+deg = degree(G, mode = 'total')
+
+p = ccdf(deg)
+
+plot(k:max(deg), p[i:length(p)], log="xy", type = "l",
+     main = "Complementary Cumulative Degree Distribution (log-log)",
+     xlab="Degree", ylab="Probability") 
+
+```
+
+```
+We have checked and plot the complementary cumulative degree distribution that is, the number of vertices with degree at least k for every value of k – on a log–log plot. Please see the plot above.
+```
+
+```
+2nd Trial
+``` 
+```{r}
+#igraph package installed
+library (igraph)
+
+#Started with a graph with 4 vertices and directed edges.
+G <- make_empty_graph(n = 4) %>%
+add_edges(c(1,2, 2,3, 3,4)) %>%
+add_edges(c(4,1))
+E(G)[[]]
+plot(G)
+
+```
+```
+We have started by generating the graph with 4 nodes and 4 directed edges. Please see the starting graph above.
+``` 
+```{r}
+#The probabilities genereated with unif(0, 1) to check whether the new vertex will be added to the ranomnly selected vertex or accorrdign to indegree.
+unif_list = runif(50000, min = 0 , max = 1)
+
+#Specifying the last vertex as 4 since we have the biggest as 4 now.
+last_vrtx = 4
+
+#Search in the uniform list created above in a for loop
+for (i in unif_list){
+  
+  last_vrtx = last_vrtx + 1 #The last vertex updated to add new vertex to the graph.
+  
+  vertex = as.integer(sample(size = 1, V(G))) #Randomnly select the vertex from the graph to connect the new vertex.
+  new_vertex = as.integer(last_vrtx) #Create the new vertex
+  
+  #Check whether the probability is greater than 0.5 to connect new vertex with the one randomnly selected.
+  if (i > 0.5){
+    G <- add_vertices(G,1) #Add the new vertex to the graph
+    dir_edge = c(new_vertex, vertex) #Connect the randomnly selected and new created vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+  
+  #If the probability equal to and lower than 0.5 select the vertex according to its indegree.
+  else {
+    vertex = sample(size = 1,V(G), prob = degree(G, mode = 'in', normalized = T)) #Select the vertex from graph that will be connected with new vertex according to its indegree.
+    new_vertex = as.integer(last_vrtx) #Create the new vertex.
+    G <- add_vertices(G,1) #Add the new vertex tot the graph G
+    dir_edge = c(new_vertex, vertex) #Connect the selected vertex with the new vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+}
+
+#Plot the G by specifying the arrow size, vertex size and remove the vertex label to have a more clear graph.
+plot(G, edge.arrow.size=0.01,
+     vertex.size=0.01,
+     vertex.label = NA)
+
+
+
+```
+```
+We have generated a random uniform list with (0,1) boundries. We have started to ad new vertices and connect them with the old graph by cheking the probability. The new vertex connect with the randomnly selected vertex with probability γ = 0.5 and connect with the one according to indegree with probability 1 − γ = 0.5. Please see the big graph above.
+```
+
+```{r}
+#Plot the empirical degree distribution on a log-log plot by ggplot2
+deg_G <- degree(G, mode = "total")
+#Fit the power law to the degree distribution
+fit <- fit_power_law(deg_G, implementation="R.mle")
+p_alpha <- stats4::coef(fit)
+p_alpha
+xx <- deg_G
+
+ff <- function(xx){
+  xx^(-p_alpha)
+}
+
+deg_G.histogram <- as.data.frame(table(deg_G))
+deg_G.histogram[,1] <- as.numeric(paste(deg_G.histogram[,1]))
+
+library(ggplot2)
+qplot()+
+  geom_point(aes(x = deg_G.histogram$deg_G, y = deg_G.histogram$Freq/sum(deg_G.histogram$Freq)))+
+  geom_point(colour='blue') +
+  scale_x_continuous("Degree",
+                     breaks = c(1, 5, 10, 50, 100, 300, 1000, 10000, 100000),
+                     trans = "log10") +
+  scale_y_continuous("Frequency",
+                     breaks = c(0, 0,000001, 0.00001,0,0001,0,001, 0.01, 0.1, 1),
+                     trans = "log10") +
+  ggtitle("Empirical Degree Distribution") +
+  theme_bw() +
+  geom_line(aes(x=seq(1,100,0.1),y=ff(seq(1,100,0.1))),col="red")
+
+
+```
+
+```
+As it is shown above, we have plot the empirical degree distribution on a log-log scale. We have also apllied the power law fit function in here. And we have shown above the power law fit to our degree distribution.
+```
+
+```{r}
+#Plot CCDF on a log-log plot
+ccdf <- function(deg) {
+  n = length(deg)
+  max = max(deg)
+  p = rep(0, max)
+  for (i in 1:length(p)) {
+    p[i] = length(deg[deg >= i]) / n
+  } 
+  return(p)
+}
+
+k = 2
+deg = degree(G, mode = 'total')
+
+p = ccdf(deg)
+
+plot(k:max(deg), p[i:length(p)], log="xy", type = "l",
+     main = "Complementary Cumulative Degree Distribution (log-log)",
+     xlab="Degree", ylab="Probability") 
+
+```
+
+```
+We have checked and plot the complementary cumulative degree distribution that is, the number of vertices with degree at least k for every value of k – on a log–log plot. Please see the plot above.
+```
+
+```
+3rd Trial
+``` 
+```{r}
+#igraph package installed
+library (igraph)
+
+#Started with a graph with 4 vertices and directed edges.
+G <- make_empty_graph(n = 4) %>%
+add_edges(c(1,2, 2,3, 3,4)) %>%
+add_edges(c(4,1))
+E(G)[[]]
+plot(G)
+
+```
+```
+We have started by generating the graph with 4 nodes and 4 directed edges. Please see the starting graph above.
+``` 
+```{r}
+#The probabilities genereated with unif(0, 1) to check whether the new vertex will be added to the ranomnly selected vertex or accorrdign to indegree.
+unif_list = runif(50000, min = 0 , max = 1)
+
+#Specifying the last vertex as 4 since we have the biggest as 4 now.
+last_vrtx = 4
+
+#Search in the uniform list created above in a for loop
+for (i in unif_list){
+  
+  last_vrtx = last_vrtx + 1 #The last vertex updated to add new vertex to the graph.
+  
+  vertex = as.integer(sample(size = 1, V(G))) #Randomnly select the vertex from the graph to connect the new vertex.
+  new_vertex = as.integer(last_vrtx) #Create the new vertex
+  
+  #Check whether the probability is greater than 0.5 to connect new vertex with the one randomnly selected.
+  if (i > 0.5){
+    G <- add_vertices(G,1) #Add the new vertex to the graph
+    dir_edge = c(new_vertex, vertex) #Connect the randomnly selected and new created vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+  
+  #If the probability equal to and lower than 0.5 select the vertex according to its indegree.
+  else {
+    vertex = sample(size = 1,V(G), prob = degree(G, mode = 'in', normalized = T)) #Select the vertex from graph that will be connected with new vertex according to its indegree.
+    new_vertex = as.integer(last_vrtx) #Create the new vertex.
+    G <- add_vertices(G,1) #Add the new vertex tot the graph G
+    dir_edge = c(new_vertex, vertex) #Connect the selected vertex with the new vertex
+    G <- add_edges(G , dir_edge) #Add the edge to the graph G.
+  }
+}
+
+#Plot the G by specifying the arrow size, vertex size and remove the vertex label to have a more clear graph.
+plot(G, edge.arrow.size=0.01,
+     vertex.size=0.01,
+     vertex.label = NA)
+
+
+
+```
+```
+We have generated a random uniform list with (0,1) boundries. We have started to ad new vertices and connect them with the old graph by cheking the probability. The new vertex connect with the randomnly selected vertex with probability γ = 0.5 and connect with the one according to indegree with probability 1 − γ = 0.5. Please see the big graph above.
+```
+
+```{r}
+#Plot the empirical degree distribution on a log-log plot by ggplot2
+deg_G <- degree(G, mode = "total")
+#Fit the power law to the degree distribution
+fit <- fit_power_law(deg_G, implementation="R.mle")
+p_alpha <- stats4::coef(fit)
+p_alpha
+xx <- deg_G
+
+ff <- function(xx){
+  xx^(-p_alpha)
+}
+
+deg_G.histogram <- as.data.frame(table(deg_G))
+deg_G.histogram[,1] <- as.numeric(paste(deg_G.histogram[,1]))
+
+library(ggplot2)
+qplot()+
+  geom_point(aes(x = deg_G.histogram$deg_G, y = deg_G.histogram$Freq/sum(deg_G.histogram$Freq)))+
+  geom_point(colour='blue') +
+  scale_x_continuous("Degree",
+                     breaks = c(1, 5, 10, 50, 100, 300, 1000, 10000, 100000),
+                     trans = "log10") +
+  scale_y_continuous("Frequency",
+                     breaks = c(0, 0,000001, 0.00001,0,0001,0,001, 0.01, 0.1, 1),
+                     trans = "log10") +
+  ggtitle("Empirical Degree Distribution") +
+  theme_bw() +
+  geom_line(aes(x=seq(1,100,0.1),y=ff(seq(1,100,0.1))),col="red")
+
+
+```
+
+```
+As it is shown above, we have plot the empirical degree distribution on a log-log scale. We have also apllied the power law fit function in here. And we have shown above the power law fit to our degree distribution.
+```
+
+```{r}
+#Plot CCDF on a log-log plot
+ccdf <- function(deg) {
+  n = length(deg)
+  max = max(deg)
+  p = rep(0, max)
+  for (i in 1:length(p)) {
+    p[i] = length(deg[deg >= i]) / n
+  } 
+  return(p)
+}
+
+k = 2
+deg = degree(G, mode = 'total')
+
+p = ccdf(deg)
+
+plot(k:max(deg), p[i:length(p)], log="xy", type = "l",
+     main = "Complementary Cumulative Degree Distribution (log-log)",
+     xlab="Degree", ylab="Probability") 
+
+```
+
+```
+We have checked and plot the complementary cumulative degree distribution that is, the number of vertices with degree at least k for every value of k – on a log–log plot. Please see the plot above.
+```
